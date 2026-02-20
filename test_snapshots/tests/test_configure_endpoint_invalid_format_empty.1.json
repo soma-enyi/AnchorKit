@@ -367,11 +367,18 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000003"
               },
               {
-                "symbol": "register_attestor"
+                "symbol": "configure_endpoint"
               }
             ],
             "data": {
-              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+              "vec": [
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                },
+                {
+                  "string": ""
+                }
+              ]
             }
           }
         }
@@ -390,12 +397,12 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "register_attestor"
+                "symbol": "configure_endpoint"
               }
             ],
             "data": {
               "error": {
-                "contract": 4
+                "contract": 10
               }
             }
           }
@@ -416,7 +423,7 @@
               },
               {
                 "error": {
-                  "contract": 4
+                  "contract": 10
                 }
               }
             ],
@@ -441,7 +448,7 @@
               },
               {
                 "error": {
-                  "contract": 4
+                  "contract": 10
                 }
               }
             ],
@@ -451,12 +458,15 @@
                   "string": "contract call failed"
                 },
                 {
-                  "symbol": "register_attestor"
+                  "symbol": "configure_endpoint"
                 },
                 {
                   "vec": [
                     {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    },
+                    {
+                      "string": ""
                     }
                   ]
                 }
@@ -480,7 +490,7 @@
               },
               {
                 "error": {
-                  "contract": 4
+                  "contract": 10
                 }
               }
             ],

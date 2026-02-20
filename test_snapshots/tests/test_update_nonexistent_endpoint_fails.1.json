@@ -367,11 +367,21 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000003"
               },
               {
-                "symbol": "register_attestor"
+                "symbol": "update_endpoint"
               }
             ],
             "data": {
-              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+              "vec": [
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                },
+                {
+                  "string": "https://api.example.com/attest"
+                },
+                {
+                  "bool": true
+                }
+              ]
             }
           }
         }
@@ -390,12 +400,12 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "register_attestor"
+                "symbol": "update_endpoint"
               }
             ],
             "data": {
               "error": {
-                "contract": 4
+                "contract": 11
               }
             }
           }
@@ -416,7 +426,7 @@
               },
               {
                 "error": {
-                  "contract": 4
+                  "contract": 11
                 }
               }
             ],
@@ -441,7 +451,7 @@
               },
               {
                 "error": {
-                  "contract": 4
+                  "contract": 11
                 }
               }
             ],
@@ -451,12 +461,18 @@
                   "string": "contract call failed"
                 },
                 {
-                  "symbol": "register_attestor"
+                  "symbol": "update_endpoint"
                 },
                 {
                   "vec": [
                     {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    },
+                    {
+                      "string": "https://api.example.com/attest"
+                    },
+                    {
+                      "bool": true
                     }
                   ]
                 }
@@ -480,7 +496,7 @@
               },
               {
                 "error": {
-                  "contract": 4
+                  "contract": 11
                 }
               }
             ],
