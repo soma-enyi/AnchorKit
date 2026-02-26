@@ -147,11 +147,11 @@ pub use events::{
     AttestationRecorded, AttestorAdded, AttestorRemoved, EndpointConfigured, EndpointRemoved,
     OperationLogged, QuoteReceived, QuoteSubmitted, ServicesConfigured, SessionCreated,
     SettlementConfirmed, TransferInitiated, RateLimitEncountered, RateLimitBackoff, RateLimitRecovered,
-=======
+};
 pub use webhook_middleware::{
     ActivitySeverity, SignatureAlgorithm, SuspiciousActivityRecord, SuspiciousActivityType,
     WebhookDeliveryRecord, WebhookDeliveryStatus, WebhookMiddleware, WebhookRequest,
-    WebhookSecurityConfig, WebhookValidationRe
+    WebhookSecurityConfig, WebhookValidationResult,
 };
 
 #[contract]
