@@ -3,7 +3,6 @@
 //! Verifies the anchor-signed token using a 32-byte Ed25519 public key stored on-chain.
 //! Payload must include integer `exp` (Unix seconds) and string `sub` (Stellar strkey of the client).
 
-#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
@@ -129,8 +128,8 @@ pub fn verify_sep10_jwt(
 
     let mut dots: [usize; 2] = [0; 2];
     let mut dot_count = 0usize;
-    for i in 0..n_usize {
-        if buf[i] == b'.' {
+    for (i, &byte) in buf[..n_usize].iter().enumerate() {
+        if byte == b'.' {
             if dot_count < 2 {
                 dots[dot_count] = i;
                 dot_count += 1;
@@ -166,12 +165,18 @@ pub fn verify_sep10_jwt(
     let signing_input = Bytes::from_slice(env, &buf[..d1]);
     let sig_bytes = Bytes::from_slice(env, sig_dec.as_slice());
 
-    if !env
-        .crypto()
-        .ed25519_verify(anchor_public_key, &signing_input, &sig_bytes)
-    {
-        return Err(());
-    }
+    // Convert public key Bytes to BytesN<32>
+    let mut pk_arr = [0u8; 32];
+    anchor_public_key.copy_into_slice(&mut pk_arr);
+    let pk_bytesn = soroban_sdk::BytesN::from_array(env, &pk_arr);
+
+    // Convert sig to BytesN<64>
+    let mut sig_arr = [0u8; 64];
+    sig_bytes.copy_into_slice(&mut sig_arr);
+    let sig_bytesn = soroban_sdk::BytesN::from_array(env, &sig_arr);
+
+    // ed25519_verify panics on failure, so we just call it
+    env.crypto().ed25519_verify(&pk_bytesn, &signing_input, &sig_bytesn);
 
     let payload_dec = base64url_decode(payload_b64).map_err(|_| ())?;
     let exp = parse_json_exp(&payload_dec)?;
@@ -193,6 +198,7 @@ pub fn verify_sep10_jwt(
 #[cfg(test)]
 mod tests {
     extern crate std;
+    use std::format;
 
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
@@ -240,8 +246,11 @@ mod tests {
 
         let attestor = Address::generate(&env);
         let sub = attestor.to_string();
-        let sub_str: std::string::String = sub.to_string();
-        let jwt = build_jwt(&signing_key, sub_str.as_str(), 2_000);
+        let mut sub_buf = [0u8; 64];
+        let sub_len = sub.len() as usize;
+        sub.copy_into_slice(&mut sub_buf[..sub_len]);
+        let sub_str = std::str::from_utf8(&sub_buf[..sub_len]).unwrap();
+        let jwt = build_jwt(&signing_key, sub_str, 2_000);
         let token = String::from_str(&env, jwt.as_str());
 
         assert!(verify_sep10_jwt(&env, &token, &pk, Some(&sub)).is_ok());
@@ -257,14 +266,18 @@ mod tests {
 
         let attestor = Address::generate(&env);
         let sub = attestor.to_string();
-        let sub_str: std::string::String = sub.to_string();
-        let jwt = build_jwt(&signing_key, sub_str.as_str(), 1_000);
+        let mut sub_buf = [0u8; 64];
+        let sub_len = sub.len() as usize;
+        sub.copy_into_slice(&mut sub_buf[..sub_len]);
+        let sub_str = std::str::from_utf8(&sub_buf[..sub_len]).unwrap();
+        let jwt = build_jwt(&signing_key, sub_str, 1_000);
         let token = String::from_str(&env, jwt.as_str());
 
         assert!(verify_sep10_jwt(&env, &token, &pk, Some(&sub)).is_err());
     }
 
     #[test]
+    #[should_panic]
     fn verify_rejects_invalid_signature() {
         let env = Env::default();
         ledger(&env, 1_000);
@@ -274,8 +287,11 @@ mod tests {
 
         let attestor = Address::generate(&env);
         let sub = attestor.to_string();
-        let sub_str: std::string::String = sub.to_string();
-        let jwt = build_jwt(&signing_key, sub_str.as_str(), 2_000);
+        let mut sub_buf = [0u8; 64];
+        let sub_len = sub.len() as usize;
+        sub.copy_into_slice(&mut sub_buf[..sub_len]);
+        let sub_str = std::str::from_utf8(&sub_buf[..sub_len]).unwrap();
+        let jwt = build_jwt(&signing_key, sub_str, 2_000);
         let token = String::from_str(&env, jwt.as_str());
 
         assert!(verify_sep10_jwt(&env, &token, &pk, Some(&sub)).is_err());

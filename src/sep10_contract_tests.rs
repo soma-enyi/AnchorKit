@@ -1,6 +1,7 @@
 #![cfg(test)]
 
 mod sep10_contract_tests {
+    extern crate std;
     use ed25519_dalek::{Signer, SigningKey};
     use rand::rngs::OsRng;
     use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
@@ -44,8 +45,11 @@ mod sep10_contract_tests {
 
         let attestor = Address::generate(&env);
         let sub = attestor.to_string();
-        let sub_std: std::string::String = sub.to_string();
-        let jwt = build_sep10_jwt(&sk, sub_std.as_str(), 2000);
+        let mut sub_buf = [0u8; 64];
+        let sub_len = sub.len() as usize;
+        sub.copy_into_slice(&mut sub_buf[..sub_len]);
+        let sub_std = std::str::from_utf8(&sub_buf[..sub_len]).unwrap();
+        let jwt = build_sep10_jwt(&sk, sub_std, 2000);
         let token = String::from_str(&env, jwt.as_str());
         client.verify_sep10_token(&token, &issuer);
     }

@@ -29,7 +29,7 @@ pub use sep6::{
     RawDepositResponse, RawTransactionResponse, RawWithdrawalResponse, TransactionKind,
     TransactionStatus, TransactionStatusResponse, WithdrawalResponse,
 };
-pub use contract::AnchorKitContract;
+pub use contract::{AnchorKitContract, AnchorKitContractClient};
 
 #[cfg(test)]
 mod request_id_tests;

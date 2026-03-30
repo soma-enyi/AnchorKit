@@ -5,7 +5,6 @@
 //! - HTTPS-only connections
 //! - Rejection of malformed domains
 
-#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 use alloc::vec::Vec;
@@ -29,7 +28,7 @@ use crate::errors::AnchorKitError;
 ///
 /// # Examples
 /// ```
-/// use anchor_kit::domain_validator::validate_anchor_domain;
+/// use anchorkit::validate_anchor_domain;
 ///
 /// // Valid domain
 /// assert!(validate_anchor_domain("https://example.com").is_ok());
@@ -99,6 +98,20 @@ fn validate_host(host: &str) -> Result<(), AnchorKitError> {
 
     // Check for spaces in host
     if host.contains(' ') {
+        return Err(AnchorKitError::invalid_endpoint_format());
+    }
+
+    // Reject IPv6 addresses
+    if host.starts_with('[') {
+        return Err(AnchorKitError::invalid_endpoint_format());
+    }
+
+    // Reject IPv4 addresses (all-numeric labels separated by dots)
+    let host_no_port = host.split(':').next().unwrap_or(host);
+    let is_ipv4 = host_no_port.split('.').all(|label| {
+        !label.is_empty() && label.chars().all(|c| c.is_ascii_digit())
+    }) && host_no_port.split('.').count() == 4;
+    if is_ipv4 {
         return Err(AnchorKitError::invalid_endpoint_format());
     }
 
@@ -179,13 +192,11 @@ fn validate_host(host: &str) -> Result<(), AnchorKitError> {
 
 /// Validates URL characters
 fn validate_url_characters(url: &str) -> Result<(), AnchorKitError> {
-    // Check for control characters
     for c in url.chars() {
-        if c.is_control() {
+        if c.is_control() || !c.is_ascii() || c == '<' || c == '>' || c == '"' || c == '{' || c == '}' || c == '|' || c == '\\' || c == '^' || c == '`' {
             return Err(AnchorKitError::invalid_endpoint_format());
         }
     }
-
     Ok(())
 }
 
@@ -362,14 +373,14 @@ mod tests {
 
     #[test]
     fn test_length_boundaries() {
-        // Domain exactly at 2048-character limit (should pass)
-        let max_valid_domain = format!("https://{}.com", "a".repeat(2039));
+        // Domain exactly at 2048-character limit: "https://" (8) + label + ".com" (4) = 2048 → label = 2036
+        let max_valid_domain = format!("https://{}.com", "a".repeat(2036));
         assert!(validate_anchor_domain(&max_valid_domain).is_ok());
-        
-        // Domain exceeding 2048-character limit (should fail)
-        let too_long_domain = format!("https://{}.com", "a".repeat(2040));
+
+        // Domain exceeding 2048-character limit
+        let too_long_domain = format!("https://{}.com", "a".repeat(2037));
         assert!(validate_anchor_domain(&too_long_domain).is_err());
-        
+
         // Very short valid domains
         assert!(validate_anchor_domain("https://a.b").is_ok());
         assert!(validate_anchor_domain("https://ab.cd").is_ok());

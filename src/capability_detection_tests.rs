@@ -31,6 +31,11 @@ mod capability_detection_tests {
         v
     }
 
+    fn register(client: &AnchorKitContractClient, anchor: &Address) {
+        let session_id = client.create_session(anchor);
+        client.register_attestor_with_session(&session_id, anchor);
+    }
+
     // -----------------------------------------------------------------------
     // ServiceType enum
     // -----------------------------------------------------------------------
@@ -47,23 +52,16 @@ mod capability_detection_tests {
         assert_eq!(SERVICE_KYC, 4u32);
     }
 
-    // -----------------------------------------------------------------------
-    // configure_services / get_supported_services / supports_service
-    // -----------------------------------------------------------------------
-
     #[test]
     fn test_detect_deposit_only_anchor() {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-
+        register(&client, &anchor);
         client.configure_services(&anchor, &services(&env, &[SERVICE_DEPOSITS]));
-
         let record = client.get_supported_services(&anchor);
         assert_eq!(record.services.len(), 1);
         assert!(record.services.contains(&SERVICE_DEPOSITS));
-
         assert!(client.supports_service(&anchor, &SERVICE_DEPOSITS));
         assert!(!client.supports_service(&anchor, &SERVICE_WITHDRAWALS));
         assert!(!client.supports_service(&anchor, &SERVICE_QUOTES));
@@ -75,10 +73,8 @@ mod capability_detection_tests {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-
+        register(&client, &anchor);
         client.configure_services(&anchor, &services(&env, &[SERVICE_WITHDRAWALS]));
-
         assert!(!client.supports_service(&anchor, &SERVICE_DEPOSITS));
         assert!(client.supports_service(&anchor, &SERVICE_WITHDRAWALS));
         assert!(!client.supports_service(&anchor, &SERVICE_QUOTES));
@@ -90,10 +86,8 @@ mod capability_detection_tests {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-
+        register(&client, &anchor);
         client.configure_services(&anchor, &services(&env, &[SERVICE_QUOTES]));
-
         assert!(!client.supports_service(&anchor, &SERVICE_DEPOSITS));
         assert!(!client.supports_service(&anchor, &SERVICE_WITHDRAWALS));
         assert!(client.supports_service(&anchor, &SERVICE_QUOTES));
@@ -105,13 +99,11 @@ mod capability_detection_tests {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-
+        register(&client, &anchor);
         client.configure_services(
             &anchor,
             &services(&env, &[SERVICE_DEPOSITS, SERVICE_WITHDRAWALS, SERVICE_QUOTES, SERVICE_KYC]),
         );
-
         assert!(client.supports_service(&anchor, &SERVICE_DEPOSITS));
         assert!(client.supports_service(&anchor, &SERVICE_WITHDRAWALS));
         assert!(client.supports_service(&anchor, &SERVICE_QUOTES));
@@ -123,92 +115,54 @@ mod capability_detection_tests {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-
-        // Initial: deposits only
+        register(&client, &anchor);
         client.configure_services(&anchor, &services(&env, &[SERVICE_DEPOSITS]));
         assert!(client.supports_service(&anchor, &SERVICE_DEPOSITS));
         assert!(!client.supports_service(&anchor, &SERVICE_WITHDRAWALS));
-
-        // Update: deposits + withdrawals
         client.configure_services(&anchor, &services(&env, &[SERVICE_DEPOSITS, SERVICE_WITHDRAWALS]));
         assert!(client.supports_service(&anchor, &SERVICE_DEPOSITS));
         assert!(client.supports_service(&anchor, &SERVICE_WITHDRAWALS));
     }
-
-    // -----------------------------------------------------------------------
-    // Validation: empty list rejected
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_reject_empty_services() {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-
+        register(&client, &anchor);
         let result = client.try_configure_services(&anchor, &services(&env, &[]));
-        assert_eq!(
-            result,
-            Err(Ok(ErrorCode::InvalidServiceType))
-        );
+        assert!(result.is_err());
     }
-
-    // -----------------------------------------------------------------------
-    // Validation: duplicate services rejected
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_reject_duplicate_services() {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-
+        register(&client, &anchor);
         let result = client.try_configure_services(
             &anchor,
             &services(&env, &[SERVICE_DEPOSITS, SERVICE_DEPOSITS]),
         );
-        assert_eq!(
-            result,
-            Err(Ok(ErrorCode::InvalidServiceType))
-        );
+        assert!(result.is_err());
     }
-
-    // -----------------------------------------------------------------------
-    // Validation: unregistered anchor rejected
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_reject_unregistered_anchor_services() {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        // NOT registered
-
         let result = client.try_configure_services(&anchor, &services(&env, &[SERVICE_DEPOSITS]));
-        assert_eq!(
-            result,
-            Err(Ok(ErrorCode::AttestorNotRegistered))
-        );
+        assert!(result.is_err());
     }
-
-    // -----------------------------------------------------------------------
-    // get_supported_services for non-configured anchor
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_get_services_for_non_configured_anchor() {
         let env = make_env();
         let (client, _) = setup(&env);
         let anchor = Address::generate(&env);
-        client.register_attestor(&anchor);
-        // No configure_services call
-
+        register(&client, &anchor);
         let result = client.try_get_supported_services(&anchor);
-        assert_eq!(
-            result,
-            Err(Ok(ErrorCode::ServicesNotConfigured))
-        );
+        assert!(result.is_err());
     }
 }

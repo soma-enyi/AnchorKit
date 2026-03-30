@@ -1,5 +1,6 @@
+#![allow(clippy::too_many_arguments)]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, Bytes, Env, String, Symbol, Vec,
+    contract, contractimpl, contracttype, panic_with_error, symbol_short, Address, Bytes, Env, String, Symbol, Vec,
 };
 
 use crate::errors::ErrorCode;
@@ -330,7 +331,7 @@ impl AnchorKitContract {
     /// Generate a deterministic request ID: sha256(timestamp_u64_be || sequence_number_u32_be)[:16]
     pub fn generate_request_id(env: Env) -> RequestId {
         let ts = env.ledger().timestamp();
-        let seq = env.ledger().sequence() as u32;
+        let seq = env.ledger().sequence();
 
         // Build input: 8-byte timestamp || 4-byte sequence number (big-endian)
         let mut input = Bytes::new(&env);
@@ -342,9 +343,10 @@ impl AnchorKitContract {
         }
 
         let hash = env.crypto().sha256(&input);
+        let hash_arr = hash.to_array();
         let mut id = Bytes::new(&env);
         for i in 0..16u32 {
-            id.push_back(hash.get(i).unwrap());
+            id.push_back(hash_arr[i as usize]);
         }
 
         RequestId { id, created_at: ts }
@@ -452,7 +454,7 @@ impl AnchorKitContract {
         }
         let mut seen = Vec::new(&env);
         for s in services.iter() {
-            if seen.contains(&s) {
+            if seen.contains(s) {
                 panic_with_error!(&env, ErrorCode::InvalidServiceType);
             }
             seen.push_back(s);
@@ -483,7 +485,7 @@ impl AnchorKitContract {
             .persistent()
             .get::<_, AnchorServices>(&(symbol_short!("SERVICES"), anchor))
             .unwrap_or_else(|| panic_with_error!(&env, ErrorCode::ServicesNotConfigured));
-        record.services.contains(&service)
+        record.services.contains(service)
     }
 
     // -----------------------------------------------------------------------
@@ -621,7 +623,7 @@ impl AnchorKitContract {
             .persistent()
             .get::<_, AnchorServices>(&(symbol_short!("SERVICES"), anchor.clone()))
             .unwrap_or_else(|| panic_with_error!(&env, ErrorCode::ServicesNotConfigured));
-        if !services_record.services.contains(&SERVICE_QUOTES) {
+        if !services_record.services.contains(SERVICE_QUOTES) {
             panic_with_error!(&env, ErrorCode::ServicesNotConfigured);
         }
 
@@ -1264,6 +1266,21 @@ impl AnchorKitContract {
             }
         }
         panic_with_error!(&env, ErrorCode::ValidationError);
+        #[allow(unreachable_code)]
+        AssetInfo {
+            code: String::from_str(&env, ""),
+            issuer: String::from_str(&env, ""),
+            deposit_enabled: false,
+            withdrawal_enabled: false,
+            deposit_fee_fixed: 0,
+            deposit_fee_percent: 0,
+            withdrawal_fee_fixed: 0,
+            withdrawal_fee_percent: 0,
+            deposit_min_amount: 0,
+            deposit_max_amount: 0,
+            withdrawal_min_amount: 0,
+            withdrawal_max_amount: 0,
+        }
     }
 
     pub fn get_anchor_deposit_limits(
@@ -1307,9 +1324,7 @@ impl AnchorKitContract {
         anchor: Address,
         asset_code: String,
     ) -> bool {
-        match Self::get_anchor_asset_info(env, anchor, asset_code) {
-            asset => asset.deposit_enabled,
-        }
+        Self::get_anchor_asset_info(env, anchor, asset_code).deposit_enabled
     }
 
     pub fn anchor_supports_withdrawals(
@@ -1317,9 +1332,7 @@ impl AnchorKitContract {
         anchor: Address,
         asset_code: String,
     ) -> bool {
-        match Self::get_anchor_asset_info(env, anchor, asset_code) {
-            asset => asset.withdrawal_enabled,
-        }
+        Self::get_anchor_asset_info(env, anchor, asset_code).withdrawal_enabled
     }
 
     // -----------------------------------------------------------------------

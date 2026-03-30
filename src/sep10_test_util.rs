@@ -1,5 +1,8 @@
 #![cfg(test)]
 
+extern crate std;
+use std::format;
+
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use ed25519_dalek::{Signer, SigningKey};
 use soroban_sdk::{Address, Bytes, Env, String};
@@ -30,9 +33,12 @@ pub fn register_attestor_with_sep10(
     client.set_sep10_jwt_verifying_key(sep10_issuer, &pk);
 
     let sub = attestor.to_string();
-    let sub_str: std::string::String = sub.to_string();
+    let mut sub_buf = [0u8; 64];
+    let sub_len = sub.len() as usize;
+    sub.copy_into_slice(&mut sub_buf[..sub_len]);
+    let sub_str = std::str::from_utf8(&sub_buf[..sub_len]).unwrap();
     let exp = env.ledger().timestamp().saturating_add(86_400);
-    let jwt = build_sep10_jwt(signing_key, sub_str.as_str(), exp);
+    let jwt = build_sep10_jwt(signing_key, sub_str, exp);
     let token = String::from_str(env, jwt.as_str());
     client.register_attestor(attestor, &token, sep10_issuer);
 }

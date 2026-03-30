@@ -3,10 +3,9 @@
 //! Provides normalized service functions for initiating deposits, withdrawals,
 //! and fetching transaction status across different anchors.
 
-#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
-use alloc::string::{String, ToString};
+use alloc::string::String;
 
 use crate::errors::Error;
 
@@ -28,7 +27,7 @@ pub enum TransactionStatus {
 }
 
 impl TransactionStatus {
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_status_str(s: &str) -> Self {
         match s {
             "pending_external" => Self::PendingExternal,
             "pending_anchor" => Self::PendingAnchor,
@@ -123,7 +122,7 @@ pub enum TransactionKind {
 }
 
 impl TransactionKind {
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_status_str(s: &str) -> Self {
         match s {
             "withdrawal" | "withdraw" => Self::Withdrawal,
             _ => Self::Deposit,
@@ -173,10 +172,10 @@ pub struct RawTransactionResponse {
 
 /// Normalize a raw anchor deposit response into a canonical [`DepositResponse`].
 ///
-/// Returns `Err(Error::InvalidTransactionIntent)` if required fields are missing.
+/// Returns `Err(Error::invalid_transaction_intent())` if required fields are missing.
 pub fn initiate_deposit(raw: RawDepositResponse) -> Result<DepositResponse, Error> {
     if raw.transaction_id.is_empty() || raw.how.is_empty() {
-        return Err(Error::InvalidTransactionIntent);
+        return Err(Error::invalid_transaction_intent());
     }
 
     Ok(DepositResponse {
@@ -189,17 +188,17 @@ pub fn initiate_deposit(raw: RawDepositResponse) -> Result<DepositResponse, Erro
         status: raw
             .status
             .as_deref()
-            .map(TransactionStatus::from_str)
+            .map(TransactionStatus::from_status_str)
             .unwrap_or(TransactionStatus::Pending),
     })
 }
 
 /// Normalize a raw anchor withdrawal response into a canonical [`WithdrawalResponse`].
 ///
-/// Returns `Err(Error::InvalidTransactionIntent)` if required fields are missing.
+/// Returns `Err(Error::invalid_transaction_intent())` if required fields are missing.
 pub fn initiate_withdrawal(raw: RawWithdrawalResponse) -> Result<WithdrawalResponse, Error> {
     if raw.transaction_id.is_empty() || raw.account_id.is_empty() {
-        return Err(Error::InvalidTransactionIntent);
+        return Err(Error::invalid_transaction_intent());
     }
 
     Ok(WithdrawalResponse {
@@ -213,7 +212,7 @@ pub fn initiate_withdrawal(raw: RawWithdrawalResponse) -> Result<WithdrawalRespo
         status: raw
             .status
             .as_deref()
-            .map(TransactionStatus::from_str)
+            .map(TransactionStatus::from_status_str)
             .unwrap_or(TransactionStatus::Pending),
     })
 }
@@ -221,12 +220,12 @@ pub fn initiate_withdrawal(raw: RawWithdrawalResponse) -> Result<WithdrawalRespo
 /// Normalize a raw anchor transaction-status response into a canonical
 /// [`TransactionStatusResponse`].
 ///
-/// Returns `Err(Error::InvalidTransactionIntent)` if the transaction ID is missing.
+/// Returns `Err(Error::invalid_transaction_intent())` if the transaction ID is missing.
 pub fn fetch_transaction_status(
     raw: RawTransactionResponse,
 ) -> Result<TransactionStatusResponse, Error> {
     if raw.transaction_id.is_empty() {
-        return Err(Error::InvalidTransactionIntent);
+        return Err(Error::invalid_transaction_intent());
     }
 
     Ok(TransactionStatusResponse {
@@ -234,9 +233,9 @@ pub fn fetch_transaction_status(
         kind: raw
             .kind
             .as_deref()
-            .map(TransactionKind::from_str)
+            .map(TransactionKind::from_status_str)
             .unwrap_or(TransactionKind::Deposit),
-        status: TransactionStatus::from_str(&raw.status),
+        status: TransactionStatus::from_status_str(&raw.status),
         amount_in: raw.amount_in,
         amount_out: raw.amount_out,
         amount_fee: raw.amount_fee,
@@ -248,6 +247,8 @@ pub fn fetch_transaction_status(
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+    use std::string::ToString;
     use super::*;
 
     fn raw_deposit() -> RawDepositResponse {
@@ -299,7 +300,7 @@ mod tests {
     fn test_initiate_deposit_missing_fields_returns_error() {
         let mut raw = raw_deposit();
         raw.transaction_id = "".to_string();
-        assert_eq!(initiate_deposit(raw), Err(Error::InvalidTransactionIntent));
+        assert_eq!(initiate_deposit(raw), Err(Error::invalid_transaction_intent()));
     }
 
     #[test]
@@ -324,7 +325,7 @@ mod tests {
         raw.account_id = "".to_string();
         assert_eq!(
             initiate_withdrawal(raw),
-            Err(Error::InvalidTransactionIntent)
+            Err(Error::invalid_transaction_intent())
         );
     }
 
@@ -342,7 +343,7 @@ mod tests {
         raw.transaction_id = "".to_string();
         assert_eq!(
             fetch_transaction_status(raw),
-            Err(Error::InvalidTransactionIntent)
+            Err(Error::invalid_transaction_intent())
         );
     }
 
